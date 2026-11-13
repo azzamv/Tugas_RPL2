@@ -2,3 +2,6 @@ build/
 dist/
 nbproject/private/
 *.db
+data/
+*.mv.db
+*.trace.db
