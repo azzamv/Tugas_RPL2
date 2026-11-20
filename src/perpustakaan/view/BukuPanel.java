@@ -12,70 +12,136 @@ import perpustakaan.service.BukuService;
 
 public class BukuPanel extends JPanel implements Muat {
     private final BukuService svc = App.get(BukuService.class);
-    private final JTextField fJudul = new JTextField(), fPengarang = new JTextField(),
-            fPenerbit = new JTextField(), fTahun = new JTextField(), fStok = new JTextField();
+    private final JTextField fJudul = new JTextField();
+    private final JTextField fPengarang = new JTextField();
+    private final JTextField fPenerbit = new JTextField();
+    private final JTextField fTahun = new JTextField();
+    private final JTextField fStok = new JTextField();
     private final JTable tabel = new JTable();
     private Integer id = null;
+    private final JButton bTambah = Tema.tombol("Tambah");
+    private final JButton bUbah = Tema.tombol("Ubah");
+    private final JButton bHapus = Tema.tombolNetral("Hapus");
+    private final JButton bClear = Tema.tombolNetral("Clear");
 
     public BukuPanel() {
-        setLayout(new BorderLayout(15,15));
+        setLayout(new BorderLayout(0, 16));
         setBackground(Tema.LATAR);
-        setBorder(BorderFactory.createEmptyBorder(20,25,25,25));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 24, 24));
         add(form(), BorderLayout.NORTH);
-        add(scroll(), BorderLayout.CENTER);
+        add(tabelBox(), BorderLayout.CENTER);
+
+        Tema.styleField(fJudul); Tema.styleField(fPengarang); Tema.styleField(fPenerbit);
+        Tema.styleField(fTahun); Tema.styleField(fStok);
+        Tema.styleTabel(tabel);
+
         tabel.getSelectionModel().addListSelectionListener(e -> {
-            if(e.getValueIsAdjusting()) return;
-            int r = tabel.getSelectedRow(); if(r<0) return;
-            id = (Integer) tabel.getValueAt(r,0);
+            if (e.getValueIsAdjusting()) return;
+            int r = tabel.getSelectedRow(); if (r < 0) return;
+            id = (Integer) tabel.getValueAt(r, 0);
             fJudul.setText(v(r,1)); fPengarang.setText(v(r,2)); fPenerbit.setText(v(r,3));
             fTahun.setText(v(r,4)); fStok.setText(v(r,5));
         });
+        bTambah.addActionListener(e -> simpan(false));
+        bUbah.addActionListener(e -> simpan(true));
+        bHapus.addActionListener(e -> hapus());
+        bClear.addActionListener(e -> clear());
     }
 
     private JPanel form() {
-        JPanel p = new JPanel(new GridLayout(3,2,10,8)); p.setOpaque(false);
-        p.add(field("Judul", fJudul)); p.add(field("Pengarang", fPengarang));
-        p.add(field("Penerbit", fPenerbit)); p.add(field("Tahun", fTahun));
-        JPanel stok = field("Stok", fStok);
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT,8,18)); btns.setOpaque(false);
-        JButton b1=new JButton("Tambah"), b2=new JButton("Ubah"), b3=new JButton("Hapus"), b4=new JButton("Clear");
-        b1.addActionListener(e->tambah()); b2.addActionListener(e->ubah()); b3.addActionListener(e->hapus()); b4.addActionListener(e->clear());
-        btns.add(b1); btns.add(b2); btns.add(b3); btns.add(b4);
-        JPanel wrap = new JPanel(new BorderLayout(10,0)); wrap.setOpaque(false);
-        wrap.add(stok, BorderLayout.CENTER); wrap.add(btns, BorderLayout.EAST);
-        JPanel all = new JPanel(new BorderLayout(0,8)); all.setOpaque(false);
-        all.add(p, BorderLayout.CENTER); all.add(wrap, BorderLayout.SOUTH);
-        return all;
+        Tema.Kartu k = new Tema.Kartu(Tema.PUTIH);
+        k.setLayout(new GridBagLayout());
+        k.setBorder(BorderFactory.createCompoundBorder(Tema.garis(), BorderFactory.createEmptyBorder(16, 16, 16, 16)));
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(4, 6, 4, 6); c.fill = GridBagConstraints.HORIZONTAL; c.weightx = 1;
+
+        addField(k, c, 0, 0, "Judul", fJudul); addField(k, c, 1, 0, "Pengarang", fPengarang);
+        addField(k, c, 0, 1, "Penerbit", fPenerbit); addField(k, c, 1, 1, "Tahun", fTahun);
+        addField(k, c, 0, 2, "Stok", fStok);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        btns.setOpaque(false);
+        btns.add(bTambah); btns.add(bUbah); btns.add(bHapus); btns.add(bClear);
+        c.gridx = 1; c.gridy = 2; c.anchor = GridBagConstraints.SOUTHWEST; c.fill = GridBagConstraints.NONE; c.weightx = 0;
+        k.add(btns, c);
+        return k;
     }
 
-    private JPanel field(String l, JTextField f) {
-        JPanel p = new JPanel(new BorderLayout(4,4)); p.setOpaque(false);
-        JLabel lb = new JLabel(l); lb.setFont(Tema.FONT_TEBAL); lb.setForeground(Tema.TEKS);
-        f.setFont(Tema.FONT_BIASA);
-        p.add(lb, BorderLayout.NORTH); p.add(f, BorderLayout.CENTER); return p;
+    private void addField(JPanel p, GridBagConstraints c, int x, int y, String label, JTextField f) {
+        JPanel w = new JPanel(new BorderLayout(0, 4)); w.setOpaque(false);
+        JLabel l = new JLabel(label); l.setFont(Tema.FONT_TEBAL); l.setForeground(Tema.TEKS);
+        w.add(l, BorderLayout.NORTH); w.add(f, BorderLayout.CENTER);
+        GridBagConstraints gc = (GridBagConstraints) c.clone();
+        gc.gridx = x; gc.gridy = y; gc.weightx = 1; gc.fill = GridBagConstraints.HORIZONTAL;
+        p.add(w, gc);
     }
 
-    private JScrollPane scroll() {
-        tabel.setFont(Tema.FONT_BIASA); tabel.setRowHeight(28); tabel.getTableHeader().setFont(Tema.FONT_TEBAL);
-        JScrollPane sp = new JScrollPane(tabel); sp.setBorder(BorderFactory.createLineBorder(Tema.GARIS));
-        sp.getViewport().setBackground(Tema.PUTIH); return sp;
+    private JComponent tabelBox() {
+        Tema.Kartu k = new Tema.Kartu(Tema.PUTIH);
+        k.setLayout(new BorderLayout());
+        k.setBorder(BorderFactory.createCompoundBorder(Tema.garis(), BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        JScrollPane sp = new JScrollPane(tabel);
+        sp.setBorder(Tema.garis());
+        sp.getViewport().setBackground(Tema.PUTIH);
+        k.add(sp, BorderLayout.CENTER);
+        return k;
     }
 
-    private String v(int r,int c){ Object o=tabel.getValueAt(r,c); return o==null?"":o.toString(); }
+    private String v(int r, int c) { Object o = tabel.getValueAt(r, c); return o == null ? "" : o.toString(); }
 
-    private void tambah(){ try{ svc.simpan(fJudul.getText(),fPengarang.getText(),fPenerbit.getText(),fTahun.getText(),fStok.getText()); clear(); muat(); }catch(Exception e){ err(e);} }
-    private void ubah(){ if(id==null){JOptionPane.showMessageDialog(this,"Pilih data");return;} try{ svc.ubah(id,fJudul.getText(),fPengarang.getText(),fPenerbit.getText(),fTahun.getText(),fStok.getText()); clear(); muat(); }catch(Exception e){ err(e);} }
-    private void hapus(){ if(id==null){JOptionPane.showMessageDialog(this,"Pilih data");return;} if(JOptionPane.showConfirmDialog(this,"Hapus?","Konfirmasi",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return; try{ svc.hapus(id); clear(); muat(); }catch(Exception e){ err(e);} }
-    private void clear(){ id=null; fJudul.setText("");fPengarang.setText("");fPenerbit.setText("");fTahun.setText("");fStok.setText(""); tabel.clearSelection(); }
-    private void err(Exception e){ e.printStackTrace(); JOptionPane.showMessageDialog(this,e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE); }
+    private void setBusy(boolean b) {
+        bTambah.setEnabled(!b); bUbah.setEnabled(!b); bHapus.setEnabled(!b); bClear.setEnabled(!b);
+        setCursor(b ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
+    }
 
-    @Override public void muat(){
-        try{
-            List<Buku> list = svc.semua();
-            String[] kol={"ID","Judul","Pengarang","Penerbit","Tahun","Stok"};
-            Object[][] d=new Object[list.size()][6];
-            for(int i=0;i<list.size();i++){ Buku b=list.get(i); d[i]=new Object[]{b.getId(),b.getJudul(),b.getPengarang(),b.getPenerbit(),b.getTahun(),b.getStok()}; }
-            tabel.setModel(new DefaultTableModel(d,kol){ public boolean isCellEditable(int r,int c){return false;} });
-        }catch(Exception e){ err(e); }
+    private void simpan(boolean ubah) {
+        if (ubah && id == null) { JOptionPane.showMessageDialog(this, "Pilih data dulu"); return; }
+        final Integer fid = id;
+        String j=fJudul.getText(), p=fPengarang.getText(), pb=fPenerbit.getText(), t=fTahun.getText(), s=fStok.getText();
+        setBusy(true);
+        new SwingWorker<Void, Void>() {
+            Exception err;
+            protected Void doInBackground() {
+                try { if (ubah) svc.ubah(fid, j,p,pb,t,s); else svc.simpan(j,p,pb,t,s); } catch (Exception e) { err = e; }
+                return null;
+            }
+            protected void done() { setBusy(false); if (err!=null) err(err); else { clear(); muat(); } }
+        }.execute();
+    }
+
+    private void hapus() {
+        if (id == null) { JOptionPane.showMessageDialog(this, "Pilih data dulu"); return; }
+        if (JOptionPane.showConfirmDialog(this, "Hapus data ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) return;
+        final Integer fid = id;
+        setBusy(true);
+        new SwingWorker<Void, Void>() {
+            Exception err;
+            protected Void doInBackground() { try { svc.hapus(fid); } catch (Exception e) { err = e; } return null; }
+            protected void done() { setBusy(false); if (err!=null) err(err); else { clear(); muat(); } }
+        }.execute();
+    }
+
+    private void clear() { id=null; fJudul.setText(""); fPengarang.setText(""); fPenerbit.setText(""); fTahun.setText(""); fStok.setText(""); tabel.clearSelection(); }
+    private void err(Exception e) { e.printStackTrace(); JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
+
+    @Override
+    public void muat() {
+        setBusy(true);
+        new SwingWorker<List<Buku>, Void>() {
+            Exception err;
+            protected List<Buku> doInBackground() { try { return svc.semua(); } catch (Exception e) { err = e; return List.of(); } }
+            protected void done() {
+                setBusy(false);
+                if (err != null) { err(err); return; }
+                try {
+                    List<Buku> list = get();
+                    String[] kol = {"ID","Judul","Pengarang","Penerbit","Tahun","Stok"};
+                    Object[][] d = new Object[list.size()][6];
+                    for (int i=0;i<list.size();i++){ Buku b=list.get(i); d[i]=new Object[]{b.getId(),b.getJudul(),b.getPengarang(),b.getPenerbit(),b.getTahun(),b.getStok()}; }
+                    tabel.setModel(new DefaultTableModel(d, kol){ public boolean isCellEditable(int r,int c){return false;} });
+                    if (tabel.getColumnModel().getColumnCount()>0) tabel.getColumnModel().getColumn(0).setMaxWidth(60);
+                } catch (Exception e) { err(e); }
+            }
+        }.execute();
     }
 }

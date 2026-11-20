@@ -21,68 +21,124 @@ public class PinjamPanel extends JPanel implements Muat {
     private final JComboBox<Buku> cbBuku = new JComboBox<>();
     private final JTable tabel = new JTable();
     private final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private final JButton bPinjam = Tema.tombol("Pinjam");
+    private final JButton bKembali = Tema.tombol("Kembalikan");
+    private final JButton bRefresh = Tema.tombolNetral("Muat ulang");
 
     public PinjamPanel(Petugas p) {
         this.petugas = p;
-        setLayout(new BorderLayout(15,15));
+        setLayout(new BorderLayout(0, 16));
         setBackground(Tema.LATAR);
-        setBorder(BorderFactory.createEmptyBorder(20,25,25,25));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 24, 24));
         add(atas(), BorderLayout.NORTH);
-        add(scroll(), BorderLayout.CENTER);
+        add(tabelBox(), BorderLayout.CENTER);
+        cbAnggota.setFont(Tema.FONT_BIASA); cbBuku.setFont(Tema.FONT_BIASA);
+        cbAnggota.setBackground(Tema.PUTIH); cbBuku.setBackground(Tema.PUTIH);
+        Tema.styleTabel(tabel);
+        bPinjam.addActionListener(e -> pinjam());
+        bKembali.addActionListener(e -> kembali());
+        bRefresh.addActionListener(e -> muat());
     }
 
     private JPanel atas() {
-        JPanel p = new JPanel(new GridLayout(2,2,10,8)); p.setOpaque(false);
-        p.add(field("Anggota", cbAnggota)); p.add(field("Buku", cbBuku));
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT,8,0)); btns.setOpaque(false);
-        JButton b1=new JButton("Pinjam"), b2=new JButton("Kembalikan"), b3=new JButton("Refresh");
-        b1.addActionListener(e->pinjam()); b2.addActionListener(e->kembali()); b3.addActionListener(e->muat());
-        btns.add(b1); btns.add(b2); btns.add(b3);
-        p.add(btns); p.add(new JLabel());
-        return p;
+        Tema.Kartu k = new Tema.Kartu(Tema.PUTIH);
+        k.setLayout(new GridBagLayout());
+        k.setBorder(BorderFactory.createCompoundBorder(Tema.garis(), BorderFactory.createEmptyBorder(16, 16, 16, 16)));
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(4, 6, 4, 6); c.fill = GridBagConstraints.HORIZONTAL; c.weightx = 1;
+
+        c.gridx = 0; c.gridy = 0; k.add(field("Anggota", cbAnggota), c);
+        c.gridx = 1; c.gridy = 0; k.add(field("Buku", cbBuku), c);
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        btns.setOpaque(false);
+        btns.add(bPinjam); btns.add(bKembali); btns.add(bRefresh);
+        c.gridx = 0; c.gridy = 1; c.gridwidth = 2; c.weightx = 0; c.insets = new Insets(10, 6, 4, 6);
+        k.add(btns, c);
+        return k;
     }
 
-    private JPanel field(String l, JComponent c) {
-        JPanel p = new JPanel(new BorderLayout(4,4)); p.setOpaque(false);
-        JLabel lb = new JLabel(l); lb.setFont(Tema.FONT_TEBAL); lb.setForeground(Tema.TEKS);
-        p.add(lb, BorderLayout.NORTH); p.add(c, BorderLayout.CENTER); return p;
+    private JPanel field(String label, JComponent comp) {
+        JPanel w = new JPanel(new BorderLayout(0, 4)); w.setOpaque(false);
+        JLabel l = new JLabel(label); l.setFont(Tema.FONT_TEBAL); l.setForeground(Tema.TEKS);
+        w.add(l, BorderLayout.NORTH); w.add(comp, BorderLayout.CENTER);
+        return w;
     }
 
-    private JScrollPane scroll() {
-        tabel.setFont(Tema.FONT_BIASA); tabel.setRowHeight(28); tabel.getTableHeader().setFont(Tema.FONT_TEBAL);
-        JScrollPane sp = new JScrollPane(tabel); sp.setBorder(BorderFactory.createLineBorder(Tema.GARIS));
-        sp.getViewport().setBackground(Tema.PUTIH); return sp;
+    private JComponent tabelBox() {
+        Tema.Kartu k = new Tema.Kartu(Tema.PUTIH);
+        k.setLayout(new BorderLayout());
+        k.setBorder(BorderFactory.createCompoundBorder(Tema.garis(), BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        JScrollPane sp = new JScrollPane(tabel); sp.setBorder(Tema.garis()); sp.getViewport().setBackground(Tema.PUTIH);
+        k.add(sp, BorderLayout.CENTER); return k;
     }
 
-    private void pinjam(){
-        try{
-            Anggota a=(Anggota)cbAnggota.getSelectedItem(); Buku b=(Buku)cbBuku.getSelectedItem();
-            if(a==null||b==null){JOptionPane.showMessageDialog(this,"Pilih anggota dan buku");return;}
-            svc.pinjam(a.getId(), b.getId(), petugas.getId()); muat();
-        }catch(Exception e){ err(e); }
+    private void setBusy(boolean b) {
+        bPinjam.setEnabled(!b); bKembali.setEnabled(!b); bRefresh.setEnabled(!b);
+        setCursor(b ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
     }
-    private void kembali(){
-        int r=tabel.getSelectedRow(); if(r<0){JOptionPane.showMessageDialog(this,"Pilih transaksi");return;}
-        try{
-            if("Kembali".equalsIgnoreCase(String.valueOf(tabel.getValueAt(r,5)))){JOptionPane.showMessageDialog(this,"Sudah kembali");return;}
-            svc.kembali((Integer)tabel.getValueAt(r,0)); muat();
-        }catch(Exception e){ err(e); }
-    }
-    private void err(Exception e){ e.printStackTrace(); JOptionPane.showMessageDialog(this,e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE); }
+    private void err(Exception e) { e.printStackTrace(); JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); }
 
-    @Override public void muat(){
-        try{
-            cbAnggota.removeAllItems(); for(Anggota a: svc.anggotaAktif()) cbAnggota.addItem(a);
-            cbBuku.removeAllItems(); for(Buku b: svc.bukuAda()) cbBuku.addItem(b);
-            List<Pinjam> list = svc.semua();
-            String[] kol={"ID","Buku","Anggota","Tgl Pinjam","Tgl Kembali","Status"};
-            Object[][] d=new Object[list.size()][6];
-            for(int i=0;i<list.size();i++){
-                Pinjam x=list.get(i);
-                d[i]=new Object[]{x.getId(), x.getBuku()!=null?x.getBuku().getJudul():"-", x.getAnggota()!=null?x.getAnggota().getNama():"-",
-                        x.getTglPinjam()!=null?x.getTglPinjam().format(fmt):"-", x.getTglKembali()!=null?x.getTglKembali().format(fmt):"-", x.getStatus()};
+    private void pinjam() {
+        Anggota a = (Anggota) cbAnggota.getSelectedItem();
+        Buku b = (Buku) cbBuku.getSelectedItem();
+        if (a == null || b == null) { JOptionPane.showMessageDialog(this, "Pilih anggota dan buku"); return; }
+        Integer idA = a.getId(), idB = b.getId(), idP = petugas.getId();
+        setBusy(true);
+        new SwingWorker<Void, Void>() {
+            Exception err;
+            protected Void doInBackground() { try { svc.pinjam(idA, idB, idP); } catch (Exception e) { err = e; } return null; }
+            protected void done() { setBusy(false); if (err != null) err(err); else muat(); }
+        }.execute();
+    }
+
+    private void kembali() {
+        int r = tabel.getSelectedRow();
+        if (r < 0) { JOptionPane.showMessageDialog(this, "Pilih transaksi"); return; }
+        if ("Kembali".equalsIgnoreCase(String.valueOf(tabel.getValueAt(r, 5)))) { JOptionPane.showMessageDialog(this, "Sudah kembali"); return; }
+        int idPinjam = (Integer) tabel.getValueAt(r, 0);
+        setBusy(true);
+        new SwingWorker<Void, Void>() {
+            Exception err;
+            protected Void doInBackground() { try { svc.kembali(idPinjam); } catch (Exception e) { err = e; } return null; }
+            protected void done() { setBusy(false); if (err != null) err(err); else muat(); }
+        }.execute();
+    }
+
+    @Override
+    public void muat() {
+        setBusy(true);
+        new SwingWorker<Data, Void>() {
+            Exception err;
+            protected Data doInBackground() {
+                try { Data d = new Data(); d.anggota = svc.anggotaAktif(); d.buku = svc.bukuAda(); d.list = svc.semua(); return d; }
+                catch (Exception e) { err = e; return null; }
             }
-            tabel.setModel(new DefaultTableModel(d,kol){ public boolean isCellEditable(int r,int c){return false;} });
-        }catch(Exception e){ err(e); }
+            protected void done() {
+                setBusy(false);
+                if (err != null) { err(err); return; }
+                try {
+                    Data d = get();
+                    Object sa = cbAnggota.getSelectedItem(), sb = cbBuku.getSelectedItem();
+                    cbAnggota.removeAllItems(); for (Anggota a : d.anggota) cbAnggota.addItem(a);
+                    cbBuku.removeAllItems(); for (Buku b : d.buku) cbBuku.addItem(b);
+                    String[] kol = {"ID","Buku","Anggota","Tgl Pinjam","Tgl Kembali","Status"};
+                    Object[][] rows = new Object[d.list.size()][6];
+                    for (int i=0;i<d.list.size();i++) {
+                        Pinjam x = d.list.get(i);
+                        rows[i] = new Object[]{x.getId(), x.getBuku()!=null?x.getBuku().getJudul():"-", x.getAnggota()!=null?x.getAnggota().getNama():"-",
+                                x.getTglPinjam()!=null?x.getTglPinjam().format(fmt):"-", x.getTglKembali()!=null?x.getTglKembali().format(fmt):"-", x.getStatus()};
+                    }
+                    tabel.setModel(new DefaultTableModel(rows, kol){ public boolean isCellEditable(int r,int c){return false;} });
+                    if (tabel.getColumnModel().getColumnCount()>0) tabel.getColumnModel().getColumn(0).setMaxWidth(60);
+                } catch (Exception e) { err(e); }
+            }
+        }.execute();
+    }
+
+    private static class Data {
+        List<Anggota> anggota = List.of();
+        List<Buku> buku = List.of();
+        List<Pinjam> list = List.of();
     }
 }
